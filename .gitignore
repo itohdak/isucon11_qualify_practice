@@ -13,12 +13,30 @@ bin
 go
 local
 
-!webapp/go
+bench/
+!webapp/go/
 
 # 環境変数のファイル名に合わせること
-.env
-!s1/home/isucon/.env
-!s2/home/isucon/.env
-!s3/home/isucon/.env
-!s4/home/isucon/.env
-!s5/home/isucon/.env
+env.sh
+!s1/home/isucon/env.sh
+!s2/home/isucon/env.sh
+!s3/home/isucon/env.sh
+!s4/home/isucon/env.sh
+!s5/home/isucon/env.sh
+
+pprotein
+pprotein-agent
+
+# webapp/.gitignore
+# webapp/NoImage.jpg
+# webapp/ec256-public.pem
+# webapp/frontend/
+# webapp/go/
+webapp/nodejs/
+webapp/perl/
+webapp/php/
+# webapp/public/
+webapp/python/
+webapp/ruby/
+webapp/rust/
+# webapp/sql/
