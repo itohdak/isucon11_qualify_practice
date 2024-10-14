@@ -24,6 +24,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	echoInt "github.com/kaz/pprotein/integration/echov4"
+	"github.com/kaz/pprotein/integration/standalone"
 )
 
 const (
@@ -207,6 +209,8 @@ func init() {
 }
 
 func main() {
+	go standalone.Integrate(":8888")
+	
 	e := echo.New()
 	e.Debug = true
 	e.Logger.SetLevel(log.DEBUG)
@@ -235,6 +239,8 @@ func main() {
 	e.GET("/isu/:jia_isu_uuid/graph", getIndex)
 	e.GET("/register", getIndex)
 	e.Static("/assets", frontendContentsPath+"/assets")
+
+	echoInt.Integrate(e)
 
 	mySQLConnectionData = NewMySQLConnectionEnv()
 
@@ -331,6 +337,12 @@ func postInitialize(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	go func() {
+		if _, err := http.Get("http://192.168.0.183:9000/api/group/collect"); err != nil {
+			log.Printf("failed to communicate with pprotein: %v", err)
+		}
+	}()
+	
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
