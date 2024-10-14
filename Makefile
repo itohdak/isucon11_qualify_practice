@@ -1,5 +1,5 @@
 HOSTNAME:=$(shell hostname)
-BRANCH:=master
+BRANCH:=main
 PPROF_ID:=latest
 
 .PHONY: download-pgo
