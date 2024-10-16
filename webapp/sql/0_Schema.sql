@@ -24,7 +24,7 @@ CREATE TABLE `isu_condition` (
   `timestamp` DATETIME NOT NULL,
   `is_sitting` TINYINT(1) NOT NULL,
   `condition` VARCHAR(255) NOT NULL,
-  `bad_condition_count` TINYINT(1) NOT NULL AS ROUND((LENGTH(`condition`) - LENGTH(REPLACE(`condition`, '=true', ''))) / LENGTH('=true')),
+  `bad_condition_count` TINYINT(1) AS (ROUND((LENGTH(`condition`) - LENGTH(REPLACE(`condition`, '=true', ''))) / LENGTH('=true'))),
   `message` VARCHAR(255) NOT NULL,
   `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY(`id`)
