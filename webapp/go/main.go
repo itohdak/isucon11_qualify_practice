@@ -21,11 +21,12 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
+	echoInt "github.com/kaz/pprotein/integration/echov4"
+	"github.com/kaz/pprotein/integration/standalone"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-	echoInt "github.com/kaz/pprotein/integration/echov4"
-	"github.com/kaz/pprotein/integration/standalone"
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -83,13 +84,14 @@ type GetIsuListResponse struct {
 }
 
 type IsuCondition struct {
-	ID         int       `db:"id"`
-	JIAIsuUUID string    `db:"jia_isu_uuid"`
-	Timestamp  time.Time `db:"timestamp"`
-	IsSitting  bool      `db:"is_sitting"`
-	Condition  string    `db:"condition"`
-	Message    string    `db:"message"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID             int       `db:"id"`
+	JIAIsuUUID     string    `db:"jia_isu_uuid"`
+	Timestamp      time.Time `db:"timestamp"`
+	IsSitting      bool      `db:"is_sitting"`
+	Condition      string    `db:"condition"`
+	ConditionLevel string    `db:"condition_level"`
+	Message        string    `db:"message"`
+	CreatedAt      time.Time `db:"created_at"`
 }
 
 type MySQLConnectionEnv struct {
@@ -210,7 +212,7 @@ func init() {
 
 func main() {
 	go standalone.Integrate(":8888")
-	
+
 	e := echo.New()
 	e.Debug = true
 	e.Logger.SetLevel(log.DEBUG)
@@ -342,7 +344,7 @@ func postInitialize(c echo.Context) error {
 			log.Printf("failed to communicate with pprotein: %v", err)
 		}
 	}()
-	
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
@@ -1020,20 +1022,36 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 	var err error
 
 	if startTime.IsZero() {
-		err = db.Select(&conditions,
+		keys := maps.Keys(conditionLevel)
+		sql, params, err := sqlx.In(
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+				"   AND `condition_level` IN (?)"+
 				"	AND `timestamp` < ?"+
 				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime,
+			jiaIsuUUID, keys, endTime,
 		)
+		if err != nil {
+			return nil, fmt.Errorf("db error: %v", err)
+		}
+		if err = db.Select(&conditions, sql, params...); err != nil {
+			return nil, fmt.Errorf("db error: %v", err)
+		}
 	} else {
-		err = db.Select(&conditions,
+		keys := maps.Keys(conditionLevel)
+		sql, params, err := sqlx.In(
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
+				"   AND `condition_level` IN (?)"+
 				"	AND `timestamp` < ?"+
 				"	AND ? <= `timestamp`"+
 				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime, startTime,
+			jiaIsuUUID, keys, endTime, startTime,
 		)
+		if err != nil {
+			return nil, fmt.Errorf("db error: %v", err)
+		}
+		if err = db.Select(&conditions, sql, params...); err != nil {
+			return nil, fmt.Errorf("db error: %v", err)
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
@@ -1214,11 +1232,17 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
+		conditionLevel, err := calculateConditionLevel(cond.Condition)
+		if err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
 		_, err = tx.Exec(
 			"INSERT INTO `isu_condition`"+
-				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
-				"	VALUES (?, ?, ?, ?, ?)",
-			jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, cond.Message)
+				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
+				"	VALUES (?, ?, ?, ?, ?, ?)",
+			jiaIsuUUID, timestamp, cond.IsSitting, cond.Condition, conditionLevel, cond.Message)
 		if err != nil {
 			c.Logger().Errorf("db error: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
