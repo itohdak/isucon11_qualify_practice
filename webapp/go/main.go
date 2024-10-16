@@ -338,7 +338,7 @@ func postInitialize(c echo.Context) error {
 	}
 
 	go func() {
-		if _, err := http.Get("http://192.168.0.183:9000/api/group/collect"); err != nil {
+		if _, err := http.Get("http://pprotein.maca.jp:9000/api/group/collect"); err != nil {
 			log.Printf("failed to communicate with pprotein: %v", err)
 		}
 	}()
