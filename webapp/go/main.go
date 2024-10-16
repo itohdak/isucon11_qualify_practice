@@ -21,11 +21,11 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
+	echoInt "github.com/kaz/pprotein/integration/echov4"
+	"github.com/kaz/pprotein/integration/standalone"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
-	echoInt "github.com/kaz/pprotein/integration/echov4"
-	"github.com/kaz/pprotein/integration/standalone"
 )
 
 const (
@@ -83,13 +83,14 @@ type GetIsuListResponse struct {
 }
 
 type IsuCondition struct {
-	ID         int       `db:"id"`
-	JIAIsuUUID string    `db:"jia_isu_uuid"`
-	Timestamp  time.Time `db:"timestamp"`
-	IsSitting  bool      `db:"is_sitting"`
-	Condition  string    `db:"condition"`
-	Message    string    `db:"message"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID                int       `db:"id"`
+	JIAIsuUUID        string    `db:"jia_isu_uuid"`
+	Timestamp         time.Time `db:"timestamp"`
+	IsSitting         bool      `db:"is_sitting"`
+	Condition         string    `db:"condition"`
+	BadConditionCount int       `db:"bad_condition_count"`
+	Message           string    `db:"message"`
+	CreatedAt         time.Time `db:"created_at"`
 }
 
 type MySQLConnectionEnv struct {
@@ -210,7 +211,7 @@ func init() {
 
 func main() {
 	go standalone.Integrate(":8888")
-	
+
 	e := echo.New()
 	e.Debug = true
 	e.Logger.SetLevel(log.DEBUG)
@@ -342,7 +343,7 @@ func postInitialize(c echo.Context) error {
 			log.Printf("failed to communicate with pprotein: %v", err)
 		}
 	}()
-	
+
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
