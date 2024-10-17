@@ -1,0 +1,1 @@
+ALTER TABLE `isu_condition` ADD `bad_condition_count` TINYINT(1) AS (ROUND((LENGTH(`condition`) - LENGTH(REPLACE(`condition`, '=true', ''))) / LENGTH('=true')))
